@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import axios from "axios";
+import { RequestWithTokenInfo } from "../request.types";
 
 const router = express.Router();
 
@@ -45,53 +46,15 @@ router.get("/callback", async (req: Request, res: Response): Promise<any> => {
 
     const { access_token, refresh_token, expires_in } = response.data;
 
-    // Return tokens to frontend or store them securely
-    res.json({ access_token, refresh_token, expires_in });
+    // Store tokens in session
+    req.session.accessToken = access_token;
+    req.session.refreshToken = refresh_token;
+    req.session.expiresAt = Date.now() + expires_in * 1000;
+
+    res.redirect("/api/user");
   } catch (error: any) {
-    console.error(
-      "Error fetching tokens:",
-      error.response?.data || error.message
-    );
-    res.status(500).send("Failed to fetch access token");
-  }
-});
-
-// Step 3: Handle Refresh Token and Provide New Access Token
-router.post("/refresh", async (req: Request, res: Response): Promise<any> => {
-  const { refresh_token } = req.body;
-
-  if (!refresh_token) {
-    return res.status(400).send("Refresh token is missing");
-  }
-
-  try {
-    const response = await axios.post(
-      "https://accounts.spotify.com/api/token",
-      null,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
-          ).toString("base64")}`,
-        },
-        params: {
-          grant_type: "refresh_token",
-          refresh_token,
-        },
-      }
-    );
-
-    const { access_token, expires_in } = response.data;
-
-    // Return new access token and expiration time to the frontend
-    res.json({ access_token, expires_in });
-  } catch (error: any) {
-    console.error(
-      "Error refreshing access token:",
-      error.response?.data || error.message
-    );
-    res.status(500).send("Failed to refresh access token");
+    console.error("Error exchanging tokens:", error.message);
+    res.status(500).send("Failed to exchange tokens");
   }
 });
 
