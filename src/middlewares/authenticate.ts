@@ -1,9 +1,8 @@
 import axios from "axios";
-import { NextFunction, Response } from "express";
-import { RequestWithTokenInfo } from "../request.types";
+import { NextFunction, Request, Response } from "express";
 
 const authenticate = async (
-  req: RequestWithTokenInfo,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<any> => {
